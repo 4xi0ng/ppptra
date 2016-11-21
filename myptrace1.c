@@ -7,6 +7,7 @@
 
 struct user_regs_struct regs;
 int wait_status;
+char c;
 
 long trap(pid_t child_pid, long addr, long int3)
 {
@@ -29,6 +30,14 @@ long trap(pid_t child_pid, long addr, long int3)
 	return oldchar; 
 }
 
+int recovery_regs(pid_t child_pid, long addr, long oldchar)
+{
+	ptrace(PTRACE_POKETEXT, child_pid, addr, oldchar);
+	regs.eip = addr;
+	ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+	print_regs(child_pid);
+}
+
 int goon(pid_t child_pid, long addr, long oldchar)
 {
 	ptrace(PTRACE_POKETEXT, child_pid, addr, oldchar);
@@ -36,6 +45,17 @@ int goon(pid_t child_pid, long addr, long oldchar)
 	ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
 	print_regs(child_pid);
 	ptrace(PTRACE_CONT, child_pid, NULL, NULL);
+	return 0;
+}
+
+int gostep(pid_t child_pid)
+{
+	ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
+	wait(&wait_status);
+	if(WIFSTOPPED(wait_status)){
+		printf("***step***\n");	
+		print_regs(child_pid);
+	}
 	return 0;
 }
 
@@ -79,9 +99,22 @@ int main(int argc, char *argv[])
 		long addr = regs.eip;
 		backup = trap(child_pid, addr, int3);
 		printf("--trap over--\n");
-		sleep(5);
-		goon(child_pid, addr, backup);
-		printf("--goon--\n");
+		//sleep(5);
+		recovery_regs(child_pid, addr, backup);
+		
+	
+		while(1){
+			printf("--while1--\n");
+			scanf("%c", &c);
+			getchar();
+			printf("c is %c\n", c);
+			switch(c){
+				case 'n':gostep(child_pid);break;
+				default:printf("error: unkonw command\n");exit(1);
+			}
+			//fflush(stdin);
+		}
+		gostep(child_pid);
 
 		//sleep(20);
 		ptrace(PTRACE_DETACH, child_pid, NULL, NULL);

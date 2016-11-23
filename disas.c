@@ -12,11 +12,15 @@ void init_ud_t(){
 	ud_set_syntax(&ud_obj, UD_SYN_INTEL);
 }
 
-int disas_num(unsigned char* opc, int num)
+char* disas_num(int num)
 {
 	int i;
-	memcpy(buffer, opc, 512);
+	const char * result;
 	for(i=0; i<num; i++){
-		ud_disassemble(&ud_obj);
+		if(ud_disassemble(&ud_obj)){
+			result = ud_insn_asm(&ud_obj);
+		}
+		else return result;
 	}
+	return result;
 }

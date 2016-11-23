@@ -1,6 +1,9 @@
+#include <udis86.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 extern ud_t ud_obj;
-extern unsigned char buffer[512];
 
-void init_ud_t();
-char* disas_num(int num);
+void* disas_num(void* buffer, int buffer_size);
+int print_asm(void* buffer, int buffer_size);

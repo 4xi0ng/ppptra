@@ -1,20 +1,43 @@
 #include <elf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-int print_ehdr(char * filename)
+FILE * f;
+
+void* read2mem(int start_addr, int offset, int size)
 {
-	FILE * f;
-	Elf32_Ehdr * ehdr;
+	void* mem_pt;
 
+	if(f == NULL){
+		perror("Open file failed");
+		exit(1);
+	}
+	if(fseek(f, offset, start_addr) != 0){
+		perror("Fseek failed");
+		exit(1);
+	}
+	mem_pt = malloc(size);
+	if(fread(mem_pt, 1, size, f) != size){
+		perror("Read file failed");
+		exit(1);
+	}
+	return mem_pt;
+}
+
+int open_file(char * filename)
+{
 	f = fopen(filename, "r");
 	if(f == NULL){
 		perror("Open file failed");
 		exit(1);
 	}
+	return 0;
+}
 
-	ehdr = (Elf32_Ehdr *)malloc(sizeof(Elf32_Ehdr));
-	fread(ehdr, 1, 52, f);
+void* read_ehdr()
+{
+	Elf32_Ehdr * ehdr = (Elf32_Ehdr *)read2mem(0, 0, 52);
 
 	//is elf
 	long elfheader = 0x464c457f;
@@ -22,18 +45,25 @@ int print_ehdr(char * filename)
 		perror("Not ELF!!");
 		exit(1);
 	}
+
+	return ehdr;
+}
+
+int print_ehdr(Elf32_Ehdr * cst_ehdr)
+{
+	Elf32_Ehdr * ehdr = cst_ehdr;
 	printf("<--ELF HEADER-->\n");
 
 	//Magic
-	printf("    Magic: ");
+	printf("%-20s", "    Magic: ");
 	for (int i = 0; i < 16; ++i)
 	{
-		printf(" %02x", ehdr->e_ident[i]);
+		printf("%02x ", ehdr->e_ident[i]);
 	}
 	printf("\n");
 	
 	//Class
-	printf("    Class: ");
+	printf("%-20s", "    Class: ");
 	switch(ehdr->e_ident[4]){
 		case ELFCLASSNONE: printf("NONE\n");break;
 		case ELFCLASS32: printf("32\n");break;
@@ -43,7 +73,7 @@ int print_ehdr(char * filename)
 	}
 
 	//Data
-	printf("    Data: ");
+	printf("%-20s", "    Data: ");
 	switch(ehdr->e_ident[5]){
 		case ELFDATANONE: printf("NONE\n");break;
 		case ELFDATA2LSB: printf("little endian\n");break;
@@ -53,7 +83,7 @@ int print_ehdr(char * filename)
 	}
 
 	//Version
-	printf("    Version: ");
+	printf("%-20s", "    Version: ");
 	switch(ehdr->e_ident[6]){
 		case EV_NONE: printf("NONE\n");break;
 		case EV_CURRENT: printf("1 current version\n");break;
@@ -62,7 +92,7 @@ int print_ehdr(char * filename)
 	}
 
 	//Type
-	printf("    Type: ");
+	printf("%-20s", "    Type: ");
 	switch(ehdr->e_type){
 		case ET_NONE: printf("NONE\n");break;
 		case ET_REL: printf("Relocatable file\n");break;
@@ -78,7 +108,7 @@ int print_ehdr(char * filename)
 	}
 
 	//Machine
-	printf("    Machine: ");
+	printf("%-20s", "    Machine: ");
 	switch(ehdr->e_machine){
 		case EM_NONE: printf("NONE\n");break;
 		case EM_M32: printf("AT&T WE 32100\n");break;
@@ -87,11 +117,13 @@ int print_ehdr(char * filename)
 		case EM_MIPS: printf("MIPS R3000 big-endian\n");break;
 		case EM_MIPS_RS3_LE: printf("MIPS R3000 little-endian\n");break;
 		case EM_ARM: printf("ARM\n");break;
+		case EM_X86_64: printf("AMD x86-64 architecture\n");break;
+		case EM_AARCH64: printf("ARM AARCH64\n");break;
 		default: printf("\n");break;
 	}
 
 	//Version
-	printf("    Version: ");
+	printf("%-20s", "    Version: ");
 	switch(ehdr->e_version){
 		case EV_NONE: printf("NONE\n");break;
 		case EV_CURRENT: printf("1 current version\n");break;
@@ -100,8 +132,66 @@ int print_ehdr(char * filename)
 	}
 
 	//Entry point address
-	/*
-	*/
+	printf("%-20s0x%x\n", "    Entry: ", ehdr->e_entry);
+
+	/* Program header table file offset */
+	printf("%-20s0x%x\n", "    PH offset: ", ehdr->e_phoff);
+
+	/* Section header table file offset */
+	printf("%-20s0x%x\n", "    SH offset: ", ehdr->e_shoff);
+
+	/* Processor-specific flags */
+	printf("%-20s0x%x\n", "    Flags: ", ehdr->e_flags);
+
+	//ELF header size
+	printf("%-20s0x%x\n", "    EH size: ", ehdr->e_ehsize);
+
+	//Program header table entry size
+	printf("%-20s0x%x\n", "    PH entsize: ", ehdr->e_phentsize);
+
+	/* Program header table entry count */
+	printf("%-20s0x%x\n", "    PH entnum: ", ehdr->e_phnum);
+
+	/* Section header table entry size */
+	printf("%-20s0x%x\n", "    SH entsize: ", ehdr->e_shentsize);
+
+	/* Section header table entry count */
+	printf("%-20s0x%x\n", "    SH entnum: ", ehdr->e_shnum);
+
+	/* Section header string table index */
+	printf("%-20s0x%x\n", "    SH shstrndx: ", ehdr->e_shstrndx);
 
 	return 0;
 }
+
+void* read_shdr(Elf32_Ehdr* cst_ehdr)
+{
+	Elf32_Ehdr * ehdr = cst_ehdr;
+	int SHentsize = ehdr->e_shentsize;
+	int SHentnum = ehdr->e_shnum;
+
+	Elf32_Shdr * shdr = (Elf32_Shdr *)read2mem(0, (int)ehdr->e_shoff, SHentnum * SHentsize);
+
+	return shdr;
+}
+
+int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
+{
+	Elf32_Ehdr* ehdr = cst_ehdr;
+	Elf32_Shdr* shdr = cst_shdr;
+
+	for (int i=0; i<ehdr->e_shstrndx; i++){
+		shdr++;
+	}
+	int addr = shdr->sh_addr+shdr->sh_offset;
+	char* str = (char *)read2mem(0, addr, shdr->sh_size);
+	printf("<--SECTION HEADER-->\n");
+
+	//reset shdr
+	shdr = cst_shdr;
+	for (int i=0; i<ehdr->e_shnum; i++){
+		printf("    [%02d]%s\n", i, str+shdr->sh_name);
+		shdr++;
+	}
+}
+

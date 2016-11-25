@@ -52,7 +52,7 @@ void* read_ehdr()
 int print_ehdr(Elf32_Ehdr * cst_ehdr)
 {
 	Elf32_Ehdr * ehdr = cst_ehdr;
-	printf("<--ELF HEADER-->\n");
+	printf("\n<--ELF HEADER-->\n");
 
 	//Magic
 	printf("%-20s", "    Magic: ");
@@ -175,6 +175,27 @@ void* read_shdr(Elf32_Ehdr* cst_ehdr)
 	return shdr;
 }
 
+char * check_sh_type(Elf32_Word sh_type)
+{
+	switch(sh_type){
+		case SHT_NULL: return "NULL";
+		case SHT_PROGBITS: return "PROGBITS";
+		case SHT_NOTE: return "NOTE";
+		case SHT_GNU_HASH: return "GNU_HASH";
+		case SHT_DYNSYM: return "DYNSYM";
+		case SHT_STRTAB: return "STRTAB";
+		case SHT_GNU_versym: return "VERSYM";
+		case SHT_GNU_verneed: return "VERNEED";
+		case SHT_REL: return "REL";
+		case SHT_INIT_ARRAY: return "INIT_ARRAY";
+		case SHT_FINI_ARRAY: return "FINI_ARRAY";
+		case SHT_DYNAMIC: return "DYNAMIC";
+		case SHT_NOBITS: return "NOBITS";
+		case SHT_SYMTAB: return "SYMTAB";
+		default: return "unknow~";
+	}
+}
+
 int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 {
 	Elf32_Ehdr* ehdr = cst_ehdr;
@@ -185,12 +206,23 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 	}
 	int addr = shdr->sh_addr+shdr->sh_offset;
 	char* str = (char *)read2mem(0, addr, shdr->sh_size);
-	printf("<--SECTION HEADER-->\n");
+	printf("\n<--SECTION HEADER-->\n");
+	printf("    [Nr]%-20s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
 	//reset shdr
 	shdr = cst_shdr;
-	for (int i=0; i<ehdr->e_shnum; i++){
-		printf("    [%02d]%s\n", i, str+shdr->sh_name);
+	for (int j=0; j<ehdr->e_shnum; j++){
+		printf("    [%02d]%-20s", j, str+shdr->sh_name);
+		printf("%-12s", check_sh_type(shdr->sh_type));
+		printf("%08x ", shdr->sh_addr);
+		printf("%06x ", shdr->sh_offset);
+		printf("%06x ", shdr->sh_size);
+		printf("%02x ", shdr->sh_entsize);
+		printf("%02x ", shdr->sh_flags);
+		printf("%02x ", shdr->sh_link);
+		printf("%02x ", shdr->sh_info);
+		printf("%02x", shdr->sh_addralign);
+		printf("\n");
 		shdr++;
 	}
 }

@@ -207,12 +207,12 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 	int addr = shdr->sh_addr+shdr->sh_offset;
 	char* str = (char *)read2mem(0, addr, shdr->sh_size);
 	printf("\n<--SECTION HEADER-->\n");
-	printf("    [Nr]%-20s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
+	printf("    [Nr]%-23s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
 	//reset shdr
 	shdr = cst_shdr;
 	for (int j=0; j<ehdr->e_shnum; j++){
-		printf("    [%02d]%-20s", j, str+shdr->sh_name);
+		printf("    [%02d]%-23s", j, str+shdr->sh_name);
 		printf("%-12s", check_sh_type(shdr->sh_type));
 		printf("%08x ", shdr->sh_addr);
 		printf("%06x ", shdr->sh_offset);

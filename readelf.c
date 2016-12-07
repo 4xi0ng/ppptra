@@ -35,7 +35,7 @@ int open_file(char * filename)
 	return 0;
 }
 
-void* read_ehdr()
+Elf32_Ehdr * init_ehdr()
 {
 	Elf32_Ehdr * ehdr = (Elf32_Ehdr *)read2mem(0, 0, 52);
 
@@ -196,6 +196,8 @@ char * check_sh_type(Elf32_Word sh_type)
 	}
 }
 
+void init_shstr
+
 int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 {
 	Elf32_Ehdr* ehdr = cst_ehdr;
@@ -205,14 +207,14 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 		shdr++;
 	}
 	int addr = shdr->sh_addr+shdr->sh_offset;
-	char* str = (char *)read2mem(0, addr, shdr->sh_size);
+	static char* shstr_str = (char *)read2mem(0, addr, shdr->sh_size);
 	printf("\n<--SECTION HEADER-->\n");
 	printf("    [Nr]%-23s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
 	//reset shdr
 	shdr = cst_shdr;
 	for (int j=0; j<ehdr->e_shnum; j++){
-		printf("    [%02d]%-23s", j, str+shdr->sh_name);
+		printf("    [%02d]%-23s", j, shstr_str+shdr->sh_name);
 		printf("%-12s", check_sh_type(shdr->sh_type));
 		printf("%08x ", shdr->sh_addr);
 		printf("%06x ", shdr->sh_offset);
@@ -227,3 +229,16 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 	}
 }
 
+int parse_strtab(Elf32_Shdr* cst_shdr, Elf32_Ehdr* cst_ehdr)
+{
+	Elf32_Ehdr* ehdr = cst_ehdr;
+	Elf32_Shdr* shdr = cst_shdr;
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(shdr->sh_type == SHT_STRTAB){
+			printf("%s\n", shstr_str+shdr->sh_name);
+		}
+
+		read2mem(shdr->);
+		shdr++;
+	}
+}

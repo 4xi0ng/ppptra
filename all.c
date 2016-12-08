@@ -2,56 +2,67 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
-FILE * f;
+void* SB;
 
-void* read2mem(int start_addr, int offset, int size)
+int get_filesize(char* filename)
 {
-	void* mem_pt;
+  struct stat statbuf;
+  stat(filename, &statbuf);
+  int size = statbuf.st_size;
 
-	if(f == NULL){
-		perror("Open file failed");
-		exit(1);
-	}
-	if(fseek(f, offset, start_addr) != 0){
-		perror("Fseek failed");
-		exit(1);
-	}
-	mem_pt = malloc(size);
-	if(fread(mem_pt, 1, size, f) != size){
-		perror("Read file failed");
-		exit(1);
-	}
-	return mem_pt;
+  return size;
 }
 
-int open_file(char * filename)
+int malloc_file(char * filename)
 {
+  void* mem_pt;
+  FILE* f;
+  int size;
+
 	f = fopen(filename, "r");
 	if(f == NULL){
 		perror("Open file failed");
 		exit(1);
 	}
-	return 0;
-}
-
-Elf32_Ehdr * init_ehdr()
-{
-	Elf32_Ehdr * ehdr = (Elf32_Ehdr *)read2mem(0, 0, 52);
-
-	//is elf
-	long elfheader = 0x464c457f;
-	if(memcmp(&elfheader, ehdr->e_ident, 4) != 0){
+  size = get_filesize(filename);
+  mem_pt = malloc(size);
+  if(fread(mem_pt, 1, size, f) != size){
+		perror("Read file failed");
+		exit(1);
+	}
+  long elfheader = 0x464c457f;
+	if(memcmp(&elfheader, mem_pt, 4) != 0){
 		perror("Not ELF!!");
 		exit(1);
 	}
+  SB = mem_pt;
+
+	return 1;
+}
+
+Elf32_Ehdr * get_ehdr()
+{
+  void* sb = SB;
+  Elf32_Ehdr * ehdr = (Elf32_Ehdr *)sb;
 
 	return ehdr;
 }
 
-int print_ehdr(Elf32_Ehdr * cst_ehdr)
+Elf32_Shdr * get_shdr()
 {
-	Elf32_Ehdr * ehdr = cst_ehdr;
+  void* sb = SB;
+	Elf32_Ehdr * ehdr = get_ehdr();
+
+	Elf32_Shdr * shdr = (Elf32_Shdr *)(sb+(int)ehdr->e_shoff);
+
+	return shdr;
+}
+
+int print_ehdr()
+{
+	Elf32_Ehdr * ehdr = get_ehdr();
 	printf("\n<--ELF HEADER-->\n");
 
 	//Magic
@@ -164,17 +175,6 @@ int print_ehdr(Elf32_Ehdr * cst_ehdr)
 	return 0;
 }
 
-void* read_shdr(Elf32_Ehdr* cst_ehdr)
-{
-	Elf32_Ehdr * ehdr = cst_ehdr;
-	int SHentsize = ehdr->e_shentsize;
-	int SHentnum = ehdr->e_shnum;
-
-	Elf32_Shdr * shdr = (Elf32_Shdr *)read2mem(0, (int)ehdr->e_shoff, SHentnum * SHentsize);
-
-	return shdr;
-}
-
 char * check_sh_type(Elf32_Word sh_type)
 {
 	switch(sh_type){
@@ -196,23 +196,22 @@ char * check_sh_type(Elf32_Word sh_type)
 	}
 }
 
-void init_shstr
-
-int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
+int print_shdr()
 {
-	Elf32_Ehdr* ehdr = cst_ehdr;
-	Elf32_Shdr* shdr = cst_shdr;
+  void* sb = SB;
+	Elf32_Ehdr* ehdr = get_ehdr();
+	Elf32_Shdr* shdr = get_shdr();
 
 	for (int i=0; i<ehdr->e_shstrndx; i++){
 		shdr++;
 	}
 	int addr = shdr->sh_addr+shdr->sh_offset;
-	static char* shstr_str = (char *)read2mem(0, addr, shdr->sh_size);
+	char* shstr_str = (char *)(sb+addr);
 	printf("\n<--SECTION HEADER-->\n");
 	printf("    [Nr]%-23s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
 	//reset shdr
-	shdr = cst_shdr;
+	shdr = get_shdr();
 	for (int j=0; j<ehdr->e_shnum; j++){
 		printf("    [%02d]%-23s", j, shstr_str+shdr->sh_name);
 		printf("%-12s", check_sh_type(shdr->sh_type));
@@ -229,16 +228,7 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 	}
 }
 
-int parse_strtab(Elf32_Shdr* cst_shdr, Elf32_Ehdr* cst_ehdr)
+void init_readelf(char* filename)
 {
-	Elf32_Ehdr* ehdr = cst_ehdr;
-	Elf32_Shdr* shdr = cst_shdr;
-	for (int j=0; j<ehdr->e_shnum; j++){
-		if(shdr->sh_type == SHT_STRTAB){
-			printf("%s\n", shstr_str+shdr->sh_name);
-		}
-
-		read2mem(shdr->);
-		shdr++;
-	}
+  malloc_file(filename);
 }

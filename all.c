@@ -6,6 +6,7 @@
 
 void* SB;
 
+
 int get_filesize(char* filename)
 {
   struct stat statbuf;
@@ -42,6 +43,8 @@ int malloc_file(char * filename)
 	return 1;
 }
 
+
+//get series
 Elf32_Ehdr * get_ehdr()
 {
   void* sb = SB;
@@ -60,6 +63,27 @@ Elf32_Shdr * get_shdr()
 	return shdr;
 }
 
+char* get_s_shstrtab()
+{
+  void* sb = SB;
+	Elf32_Ehdr* ehdr = get_ehdr();
+	Elf32_Shdr* shdr = get_shdr();
+
+	for (int i=0; i<ehdr->e_shstrndx; i++){
+		shdr++;
+	}
+	int addr = shdr->sh_addr+shdr->sh_offset;
+	char* s_shstrtab = (char *)(sb+addr);
+
+  return s_shstrtab;
+}
+
+void* get_s_symtab()
+{
+  
+}
+
+//print series
 int print_ehdr()
 {
 	Elf32_Ehdr * ehdr = get_ehdr();
@@ -198,22 +222,15 @@ char * check_sh_type(Elf32_Word sh_type)
 
 int print_shdr()
 {
-  void* sb = SB;
 	Elf32_Ehdr* ehdr = get_ehdr();
 	Elf32_Shdr* shdr = get_shdr();
+	char* s_shstrtab = get_s_shstrtab();
 
-	for (int i=0; i<ehdr->e_shstrndx; i++){
-		shdr++;
-	}
-	int addr = shdr->sh_addr+shdr->sh_offset;
-	char* shstr_str = (char *)(sb+addr);
 	printf("\n<--SECTION HEADER-->\n");
 	printf("    [Nr]%-23s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
-	//reset shdr
-	shdr = get_shdr();
 	for (int j=0; j<ehdr->e_shnum; j++){
-		printf("    [%02d]%-23s", j, shstr_str+shdr->sh_name);
+		printf("    [%02d]%-23s", j, s_shstrtab+shdr->sh_name);
 		printf("%-12s", check_sh_type(shdr->sh_type));
 		printf("%08x ", shdr->sh_addr);
 		printf("%06x ", shdr->sh_offset);
@@ -228,6 +245,17 @@ int print_shdr()
 	}
 }
 
+int print_s_symtab()
+{
+
+}
+
+int print_s_dynsym()
+{
+
+}
+
+//init
 void init_readelf(char* filename)
 {
   malloc_file(filename);

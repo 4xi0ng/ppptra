@@ -78,10 +78,42 @@ char* get_s_shstrtab()
   return s_shstrtab;
 }
 
-void* get_s_symtab()
+void* get_by_sname(char* sname)
 {
-  
+  void* sb = SB;
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, sname)==0){
+      return (sb + shdr->sh_offset);
+    }
+    shdr++;
+	}
+
+  return NULL;
 }
+
+int get_num_sym(char* name)
+{
+  void* sb = SB;
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, name)==0){
+      //printf("%d\n", shdr->sh_size);
+      return shdr->sh_size/16;
+    }
+    shdr++;
+	}
+
+  return 0;
+}
+
+//char* get_s_strtab
 
 //print series
 int print_ehdr()
@@ -245,9 +277,77 @@ int print_shdr()
 	}
 }
 
+char* check_st_type(unsigned char type)
+{
+  switch (type) {
+    case STT_NOTYPE:return "NOTYPE";
+    case STT_OBJECT:return "OBJECT";
+    case STT_FUNC:return "FUNC";
+    case STT_SECTION:return "SECTION";
+    case STT_FILE:return "FILE";
+    case STT_COMMON:return "COMMON";
+    case STT_TLS:return "TLS";
+    case STT_NUM:return "NUM";
+    case STT_LOOS:return "LOOS";
+    //case STT_GNU_IFUNC:return "IFUNC";
+    case STT_HIOS:return "HIOS";
+    case STT_LOPROC:return "LOPROC";
+    case STT_HIPROC:return "HIPROC";
+  }
+}
+
+char* check_st_bind(unsigned char bind)
+{
+  switch (bind) {
+    case STB_LOCAL:return "Local";
+    case STB_GLOBAL:return "Global";
+    case STB_WEAK:return "Weak";
+    case STB_NUM:return "Number";
+    case STB_LOOS:return "LOOS";
+    //case STB_GNU_UNIQUE:return "Unique";
+    case STB_HIOS:return "HIOS";
+    case STB_LOPROC:return "LOPROC";
+    case STB_HIPROC:return "HIPROC";
+  }
+}
+
+char* check_st_vis(unsigned char vis)
+{
+  switch (vis) {
+    case STV_DEFAULT:return "DEFAULT";
+    case STV_INTERNAL:return "INTERNAL";
+    case STV_HIDDEN:return "HIDDEN";
+    case STV_PROTECTED:return "PROTECTED";
+  }
+}
+
 int print_s_symtab()
 {
+  void* tmp = get_by_sname(".symtab");
+  //printf("%p\n", tmp);
+  int num = get_num_sym(".symtab");
+  //printf("%d\n", num);
+  char* s_strtab = (char*)get_by_sname(".strtab");
 
+  if(tmp == NULL){
+    return 0;
+  }
+  Elf32_Sym* sym = (Elf32_Sym *)tmp;
+  printf("%s", "\n<SECTION .symtab>\n");
+  printf("    [Num]  %-10s%-6s%-10s%-8s%-9s%-6s%-3s\n", "Value", "Size","Type","Bind", "Vis","Ndx","Name");
+  for (int i = 0; i < num; i++) {
+    printf("    %-5d  ", i);
+    printf("%08x  ", sym->st_value);
+    printf("%04x  ", sym->st_size);
+    printf("%-10s", check_st_type(ELF32_ST_TYPE(sym->st_info)));
+    printf("%-8s", check_st_bind(ELF32_ST_BIND(sym->st_info)));
+    printf("%-9s", check_st_vis(sym->st_other));
+    printf("%04x  ", sym->st_shndx);
+    printf("%s\n", s_strtab+sym->st_name);
+    sym++;
+  }
+
+  return 0;
 }
 
 int print_s_dynsym()

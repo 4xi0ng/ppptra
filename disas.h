@@ -5,5 +5,5 @@
 
 extern ud_t ud_obj;
 
-void* disas_num(void* buffer, int buffer_size);
+void custom_init_ud_t(void* buffer, int buffer_size);
 int print_asm(void* buffer, int buffer_size);

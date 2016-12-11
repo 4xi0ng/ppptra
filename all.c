@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "disas.h"
 
 void* SB;
 
@@ -88,6 +89,22 @@ void* get_by_sname(char* sname)
 	for (int j=0; j<ehdr->e_shnum; j++){
 		if(strcmp(s_shstrtab+shdr->sh_name, sname)==0){
       return (sb + shdr->sh_offset);
+    }
+    shdr++;
+	}
+
+  return NULL;
+}
+
+Elf32_Shdr * get_shdr_byname(char* name)
+{
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, name)==0){
+      return shdr;
     }
     shdr++;
 	}
@@ -352,9 +369,43 @@ int print_s_symtab()
 
 int print_s_dynsym()
 {
+  void* tmp = get_by_sname(".dynsym");
+  //printf("%p\n", tmp);
+  int num = get_num_sym(".dynsym");
+  //printf("%d\n", num);
+  char* s_strtab = (char*)get_by_sname(".dynstr");
 
+  if(tmp == NULL){
+    return 0;
+  }
+  Elf32_Sym* sym = (Elf32_Sym *)tmp;
+  printf("%s", "\n<SECTION .dynsym>\n");
+  printf("    [Num]  %-10s%-6s%-10s%-8s%-9s%-6s%-3s\n", "Value", "Size","Type","Bind", "Vis","Ndx","Name");
+  for (int i = 0; i < num; i++) {
+    printf("    %-5d  ", i);
+    printf("%08x  ", sym->st_value);
+    printf("%04x  ", sym->st_size);
+    printf("%-10s", check_st_type(ELF32_ST_TYPE(sym->st_info)));
+    printf("%-8s", check_st_bind(ELF32_ST_BIND(sym->st_info)));
+    printf("%-9s", check_st_vis(sym->st_other));
+    printf("%04x  ", sym->st_shndx);
+    printf("%s\n", s_strtab+sym->st_name);
+    sym++;
+  }
+
+  return 0;
 }
 
+int print_s_text()
+{
+  void* sb =SB;
+  Elf32_Shdr* shdr = get_shdr_byname(".text");
+  void* buffer = sb + shdr->sh_offset;
+  int size = shdr->sh_size;
+  print_asm(buffer, size);
+
+  return 0;
+}
 //init
 void init_readelf(char* filename)
 {

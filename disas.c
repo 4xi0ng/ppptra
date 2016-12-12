@@ -15,18 +15,18 @@ void custom_init_ud_t(void* buffer, int buffer_size)
 
 	/*
 	you need do something like this:
-	
+
 	while (ud_disassemble(&ud_obj)) {
-		ud_insn_len(&ud_obj);	
-		
+		ud_insn_len(&ud_obj);
+
 		ud_insn_hex(&ud_obj);
-	
+
 		ud_insn_asm(&ud_obj);
 	}
 	*/
 }
 
-int print_asm(void* buffer, int buffer_size)
+int print_asm(void* buffer, int buffer_size, void* mem_addr)
 {
 	ud_init(&ud_obj);
 	ud_set_mode(&ud_obj, 32);
@@ -34,18 +34,18 @@ int print_asm(void* buffer, int buffer_size)
 	ud_set_syntax(&ud_obj, UD_SYN_INTEL);
 	ud_set_input_buffer(&ud_obj, buffer, buffer_size);
 
-	void* addr = buffer;
+	//mem_addr = buffer;
 	int offset = 0;
 	int len;
 	while (ud_disassemble(&ud_obj)) {
 		len = ud_insn_len(&ud_obj);
 
-		printf("%p<+%d>    ", addr, offset);	
-		
+		printf("%p<+%d>    ", mem_addr, offset);
+
 		printf(" %-19s", ud_insn_hex(&ud_obj));
-	
+
 		printf(" %s\n", ud_insn_asm(&ud_obj));
-		addr += len;
+		mem_addr += len;
 		offset +=  len;
 	}
 	return 0;

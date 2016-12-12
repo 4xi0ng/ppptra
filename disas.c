@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "all.h"
 
 ud_t ud_obj;
 
@@ -38,6 +39,10 @@ int print_asm(void* buffer, int buffer_size, void* mem_addr)
 	int offset = 0;
 	int len;
 	while (ud_disassemble(&ud_obj)) {
+		char* func = get_sym_byaddr(mem_addr);
+		if(func != NULL){
+			printf("\n\033[34m**%s**\033[0m\n", func);
+		}
 		len = ud_insn_len(&ud_obj);
 
 		printf("%p<+%d>    ", mem_addr, offset);

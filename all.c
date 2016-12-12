@@ -399,32 +399,46 @@ int print_s_dynsym()
 
 char* get_sym_byaddr(void* addr)
 {
+  int symtab_num = get_num_sym(".symtab");
+  int dynsym_num = get_num_sym(".dynsym");
+  int num = symtab_num + dynsym_num;
+  static void* sym_arr[1000];
+  static char* sym_namearr[1000];
+
   if(symarr_flag == 0){
 
-  }
-  void* tmp = get_by_sname(".symtab");
-  int num = get_num_sym(".symtab");
-  char* s_strtab = (char*)get_by_sname(".strtab");
+    if(symtab_num != 0){
+      Elf32_Sym* sym = (Elf32_Sym *)get_by_sname(".symtab");
+      char* s_strtab = (char*)get_by_sname(".strtab");
+      for (int i = 0; i < symtab_num; i++) {
+        if(ELF32_ST_TYPE(sym->st_info) == STT_FUNC){
+          sym_arr[i] = (void*)sym->st_value;
+          sym_namearr[i] = s_strtab+sym->st_name;
+        }
+        sym++;
+      }
+    }
 
-  if(tmp == NULL){
-    return 0;
+    if(dynsym_num != 0){
+      Elf32_Sym* dyn = (Elf32_Sym *)get_by_sname(".dynsym");
+      char* s_dynstr = (char*)get_by_sname(".dynstr");
+      for (int j = 0; j < dynsym_num; j++) {
+        if(ELF32_ST_TYPE(dyn->st_info) == STT_FUNC){
+          sym_arr[symtab_num+j] = (void*)dyn->st_value;
+          sym_namearr[symtab_num+j] = s_dynstr+dyn->st_name;
+        }
+        dyn++;
+      }
+    }
+    symarr_flag = 1;
   }
-  Elf32_Sym* sym = (Elf32_Sym *)tmp;
-  printf("%s", "\n<SECTION .symtab>\n");
-  printf("    [Num]  %-10s%-6s%-10s%-8s%-9s%-6s%-3s\n", "Value", "Size","Type","Bind", "Vis","Ndx","Name");
-  for (int i = 0; i < num; i++) {
-    printf("    %-5d  ", i);
-    printf("%08x  ", sym->st_value);
-    printf("%04x  ", sym->st_size);
-    printf("%-10s", check_st_type(ELF32_ST_TYPE(sym->st_info)));
-    printf("%-8s", check_st_bind(ELF32_ST_BIND(sym->st_info)));
-    printf("%-9s", check_st_vis(sym->st_other));
-    printf("%04x  ", sym->st_shndx);
-    printf("%s\n", s_strtab+sym->st_name);
-    sym++;
+  for (int a = 0; a < num; a++) {
+    if(sym_arr[a] == addr){
+      return sym_namearr[a];
+    }
   }
+  return NULL;
 
-  return 0;
 }
 
 int print_s_text()
@@ -434,6 +448,7 @@ int print_s_text()
   void* buffer = sb + shdr->sh_offset;
   int size = shdr->sh_size;
   void* mem_addr = (void*)shdr->sh_addr;
+
   printf("\n%s\n", "<SECTION .text>");
   print_asm(buffer, size, mem_addr);
 

@@ -32,7 +32,7 @@ long trap(pid_t child_pid, long addr, long int3)
 	}
 	printf("child got signal:%s\n", strsignal(WSTOPSIG(wait_status)));
 	print_regs(child_pid);
-	return oldchar; 
+	return oldchar;
 }
 
 int recovery_regs(pid_t child_pid, long addr, long oldchar)
@@ -58,7 +58,7 @@ int gostep(pid_t child_pid)
 	ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
 	wait(&wait_status);
 	if(WIFSTOPPED(wait_status)){
-		printf("***step***\n");	
+		printf("***step***\n");
 		print_regs(child_pid);
 	}
 	return 0;
@@ -94,7 +94,7 @@ int show_next_asm(pid_t child_pid, long oldaddr, long oldchar)
 }
 
 int print_regs(pid_t child_pid)
-{	
+{
 	long eip_v;
 	long esp_v;
 	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 	long int3 = 0xcc;
 	long backup;
 
-	
+
 	init_ud_t();
 	if(argc!=2){
 		printf("Usage: %s <execultable file>\n", argv[0]);
@@ -130,23 +130,23 @@ int main(int argc, char *argv[])
 		//printf("fork return pid=%d\n", child_pid);
 		ptrace(PTRACE_ATTACH, child_pid, NULL, NULL);
 		wait(NULL);
-		
+
 		print_regs(child_pid);
 		long addr = regs.eip;
 		backup = trap(child_pid, addr, int3);
 		printf("--trap over--\n");
 		//sleep(5);
 		recovery_regs(child_pid, addr, backup);
-		
-	
+
+
 		while(1){
 			printf(">");
 			scanf("%c", &c);
-			getchar();
+			//getchar();
 			printf("c is %c\n", c);
 			switch(c){
 				case 'n':gostep(child_pid);show_next_asm(child_pid, addr, backup);break;
-				default:printf("error: unkonw command\n");exit(1);
+				default:gostep(child_pid);show_next_asm(child_pid, addr, backup);break;
 			}
 			//fflush(stdin);
 		}
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
 		//sleep(20);
 		ptrace(PTRACE_DETACH, child_pid, NULL, NULL);
-		
+
 		printf("child_pid=%d\n", child_pid);
 	}
 	return 0;

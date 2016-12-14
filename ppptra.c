@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <udis86.h>
 #include <string.h>
+#include "disas.h"
 
 
 int child_pid;
@@ -15,45 +16,20 @@ int bp_ndx = -1;
 struct user_regs_struct regs;
 int wait_status;
 
-int test(char* filename)
-{
-	child_pid = fork();
-	if(child_pid==0){
-		/*if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
-        perror("ptrace");
-        return;
-    }*/
-		execl(filename, filename, 0);
-	}
-	else{
-		//printf("fork return pid=%d\n", child_pid);
-		ptrace(PTRACE_ATTACH, child_pid, NULL, NULL);
-		while (1) {
-			wait(&wait_status);
-			sleep(3);
-			printf("child got signal:%s\n", strsignal(WSTOPSIG(wait_status)));
-			ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-			printf("eip at %lx\n", regs.eip);
-			printf("[0x08048350] is %lx\n\n", ptrace(PTRACE_PEEKTEXT, child_pid, 0x08048350, NULL));
-			ptrace(PTRACE_CONT, child_pid, NULL, NULL);
-		}
-	}
-	return 0;
-}
-
 int hang_up(char* filename)
 {
 	child_pid = fork();
 	if(child_pid==0){
 		if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
-        perror("ptrace");
-        return;
+        perror("ptrace failed");
+        exit(1);
     }
 		execl(filename, filename, 0);
 	}
 	else{
 		wait(NULL);
 	}
+
 	return child_pid;
 }
 
@@ -73,23 +49,54 @@ int bp(long addr)
 	return bp_ndx;
 }
 
+
+int handle_is_bp()
+{
+	//this method will check eip is bp or not, if true, it will resume eip and opcode
+	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+	for(int i=0; i<100; i++){
+		if(regs.eip-1 == bp_addr[i]){
+			printf("\033[34m@breakpoint %d\033[0m", i+1);
+
+			regs.eip = bp_addr[i];
+			ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+			ptrace(PTRACE_POKETEXT, child_pid, bp_addr[i], oldchar[i]);
+			ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+		/*	long buffer[4];
+			buffer[0] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip, NULL);
+			buffer[1] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+4, NULL);
+			buffer[2] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+8, NULL);
+			buffer[3] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+12, NULL);
+			puts("buffer ok");
+			print_asm((void*)buffer, 16, (void*)regs.eip);
+			*/
+			printf("oldchar%lx\n", oldchar[i]);
+			printf("addr%lx\n", bp_addr[i]);
+			printf("now%lx\n", ptrace(PTRACE_PEEKTEXT, child_pid, bp_addr[i], 0));
+			print_asm((void*)regs.eip, 16, (void*)regs.eip);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int contn()
 {
-	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-
-	printf("now eip is %lx\n", regs.eip);
-	printf("0x0804844d value is %lx\n\n", ptrace(PTRACE_PEEKTEXT, child_pid, 0x0804844d, NULL));
 	ptrace(PTRACE_CONT, child_pid, NULL, NULL);
 	wait(&wait_status);
-
-
 	if(!WIFSTOPPED(wait_status)){
 		printf("error: wait_status");
 		exit(1);
 	}
+	handle_is_bp();
+
+	return 0;
+}
+
+int next_step()
+{
+	ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
 	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	printf("child got signal:%s\n", strsignal(WSTOPSIG(wait_status)));
-	printf("breakpoint at %lx\n", regs.eip);
-	printf("0x0804844d value is %lx\n\n", ptrace(PTRACE_PEEKTEXT, child_pid, 0x0804844d, NULL));
+	print_asm((void*)regs.eip, 16, (void*)regs.eip);
 	return 0;
 }

@@ -14,7 +14,8 @@ extern int bp_ndx;
 extern struct user_regs_struct regs;
 extern int wait_status;
 
-int test(char* filename);
-int attach(char* filename);
+int hang_up(char* filename);
+int handle_is_bp();
 int bp(long addr);
 int contn();
+int next_step();

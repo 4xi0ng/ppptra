@@ -62,18 +62,17 @@ int handle_is_bp()
 			ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
 			ptrace(PTRACE_POKETEXT, child_pid, bp_addr[i], oldchar[i]);
 			ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-		/*	long buffer[4];
+			long buffer[4];
 			buffer[0] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip, NULL);
 			buffer[1] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+4, NULL);
 			buffer[2] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+8, NULL);
 			buffer[3] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+12, NULL);
-			puts("buffer ok");
-			print_asm((void*)buffer, 16, (void*)regs.eip);
-			*/
+
 			printf("oldchar%lx\n", oldchar[i]);
 			printf("addr%lx\n", bp_addr[i]);
 			printf("now%lx\n", ptrace(PTRACE_PEEKTEXT, child_pid, bp_addr[i], 0));
-			print_asm((void*)regs.eip, 16, (void*)regs.eip);
+			//print_asm((void*)regs.eip, 16, (void*)regs.eip);
+			print_asm((void*)buffer, 16, (void*)regs.eip);
 			return 1;
 		}
 	}
@@ -96,7 +95,15 @@ int contn()
 int next_step()
 {
 	ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
+	wait(NULL);
 	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	print_asm((void*)regs.eip, 16, (void*)regs.eip);
+	long buffer[6];
+	buffer[0] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip, NULL);
+	buffer[1] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+4, NULL);
+	buffer[2] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+8, NULL);
+	buffer[3] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+12, NULL);
+	buffer[4] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+16, NULL);
+	buffer[5] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+20, NULL);
+	print_asm((void*)buffer, 24, (void*)regs.eip);
 	return 0;
 }

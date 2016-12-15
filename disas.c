@@ -45,11 +45,15 @@ int print_asm(void* buffer, int buffer_size, void* mem_addr)
 		}
 		len = ud_insn_len(&ud_obj);
 
+		char * r = ud_insn_asm(&ud_obj);
+		if(strcmp(r, "invalid")==0){
+			return 0;
+		}
 		printf("%p<+%d>    ", mem_addr, offset);
 
 		printf(" %-19s", ud_insn_hex(&ud_obj));
 
-		printf(" %s\n", ud_insn_asm(&ud_obj));
+		printf(" %s\n", r);
 		mem_addr += len;
 		offset +=  len;
 	}

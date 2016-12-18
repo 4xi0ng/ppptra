@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "all.h"
+#include "readelf.h"
 
 ud_t ud_obj;
 

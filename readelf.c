@@ -2,56 +2,141 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include "disas.h"
 
-FILE * f;
+void* SB;
+int symarr_flag = 0;
 
-void* read2mem(int start_addr, int offset, int size)
+
+int get_filesize(char* filename)
 {
-	void* mem_pt;
+  struct stat statbuf;
+  stat(filename, &statbuf);
+  int size = statbuf.st_size;
 
-	if(f == NULL){
-		perror("Open file failed");
-		exit(1);
-	}
-	if(fseek(f, offset, start_addr) != 0){
-		perror("Fseek failed");
-		exit(1);
-	}
-	mem_pt = malloc(size);
-	if(fread(mem_pt, 1, size, f) != size){
-		perror("Read file failed");
-		exit(1);
-	}
-	return mem_pt;
+  return size;
 }
 
-int open_file(char * filename)
+int malloc_file(char * filename)
 {
+  void* mem_pt;
+  FILE* f;
+  int size;
+
 	f = fopen(filename, "r");
 	if(f == NULL){
 		perror("Open file failed");
 		exit(1);
 	}
-	return 0;
-}
-
-Elf32_Ehdr * init_ehdr()
-{
-	Elf32_Ehdr * ehdr = (Elf32_Ehdr *)read2mem(0, 0, 52);
-
-	//is elf
-	long elfheader = 0x464c457f;
-	if(memcmp(&elfheader, ehdr->e_ident, 4) != 0){
+  size = get_filesize(filename);
+  mem_pt = malloc(size);
+  if(fread(mem_pt, 1, size, f) != size){
+		perror("Read file failed");
+		exit(1);
+	}
+  long elfheader = 0x464c457f;
+	if(memcmp(&elfheader, mem_pt, 4) != 0){
 		perror("Not ELF!!");
 		exit(1);
 	}
+  SB = mem_pt;
+
+	return 1;
+}
+
+
+//get series
+Elf32_Ehdr * get_ehdr()
+{
+  void* sb = SB;
+  Elf32_Ehdr * ehdr = (Elf32_Ehdr *)sb;
 
 	return ehdr;
 }
 
-int print_ehdr(Elf32_Ehdr * cst_ehdr)
+Elf32_Shdr * get_shdr()
 {
-	Elf32_Ehdr * ehdr = cst_ehdr;
+  void* sb = SB;
+	Elf32_Ehdr * ehdr = get_ehdr();
+
+	Elf32_Shdr * shdr = (Elf32_Shdr *)(sb+(int)ehdr->e_shoff);
+
+	return shdr;
+}
+
+char* get_s_shstrtab()
+{
+  void* sb = SB;
+	Elf32_Ehdr* ehdr = get_ehdr();
+	Elf32_Shdr* shdr = get_shdr();
+
+	for (int i=0; i<ehdr->e_shstrndx; i++){
+		shdr++;
+	}
+	int addr = shdr->sh_addr+shdr->sh_offset;
+	char* s_shstrtab = (char *)(sb+addr);
+
+  return s_shstrtab;
+}
+
+void* get_by_sname(char* sname)
+{
+  void* sb = SB;
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, sname)==0){
+      return (sb + shdr->sh_offset);
+    }
+    shdr++;
+	}
+
+  return NULL;
+}
+
+Elf32_Shdr * get_shdr_byname(char* name)
+{
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, name)==0){
+      return shdr;
+    }
+    shdr++;
+	}
+
+  return NULL;
+}
+
+int get_num_sym(char* name)
+{
+  void* sb = SB;
+	Elf32_Shdr* shdr = get_shdr();
+	Elf32_Ehdr* ehdr = get_ehdr();
+	char* s_shstrtab = get_s_shstrtab();
+
+	for (int j=0; j<ehdr->e_shnum; j++){
+		if(strcmp(s_shstrtab+shdr->sh_name, name)==0){
+      //printf("%d\n", shdr->sh_size);
+      return shdr->sh_size/16;
+    }
+    shdr++;
+	}
+
+  return 0;
+}
+
+//char* get_s_strtab
+
+//print series
+int print_ehdr()
+{
+	Elf32_Ehdr * ehdr = get_ehdr();
 	printf("\n<--ELF HEADER-->\n");
 
 	//Magic
@@ -164,17 +249,6 @@ int print_ehdr(Elf32_Ehdr * cst_ehdr)
 	return 0;
 }
 
-void* read_shdr(Elf32_Ehdr* cst_ehdr)
-{
-	Elf32_Ehdr * ehdr = cst_ehdr;
-	int SHentsize = ehdr->e_shentsize;
-	int SHentnum = ehdr->e_shnum;
-
-	Elf32_Shdr * shdr = (Elf32_Shdr *)read2mem(0, (int)ehdr->e_shoff, SHentnum * SHentsize);
-
-	return shdr;
-}
-
 char * check_sh_type(Elf32_Word sh_type)
 {
 	switch(sh_type){
@@ -196,25 +270,17 @@ char * check_sh_type(Elf32_Word sh_type)
 	}
 }
 
-void init_shstr
-
-int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
+int print_shdr()
 {
-	Elf32_Ehdr* ehdr = cst_ehdr;
-	Elf32_Shdr* shdr = cst_shdr;
+	Elf32_Ehdr* ehdr = get_ehdr();
+	Elf32_Shdr* shdr = get_shdr();
+	char* s_shstrtab = get_s_shstrtab();
 
-	for (int i=0; i<ehdr->e_shstrndx; i++){
-		shdr++;
-	}
-	int addr = shdr->sh_addr+shdr->sh_offset;
-	static char* shstr_str = (char *)read2mem(0, addr, shdr->sh_size);
 	printf("\n<--SECTION HEADER-->\n");
 	printf("    [Nr]%-23s%-12s%-9s%-7s%-7s%-3s%-3s%-3s%-3s%-3s\n", "Name", "Type","Addr","Off", "Size","ES","Fg","Lk","If","Al");
 
-	//reset shdr
-	shdr = cst_shdr;
 	for (int j=0; j<ehdr->e_shnum; j++){
-		printf("    [%02d]%-23s", j, shstr_str+shdr->sh_name);
+		printf("    [%02d]%-23s", j, s_shstrtab+shdr->sh_name);
 		printf("%-12s", check_sh_type(shdr->sh_type));
 		printf("%08x ", shdr->sh_addr);
 		printf("%06x ", shdr->sh_offset);
@@ -229,16 +295,167 @@ int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr)
 	}
 }
 
-int parse_strtab(Elf32_Shdr* cst_shdr, Elf32_Ehdr* cst_ehdr)
+char* check_st_type(unsigned char type)
 {
-	Elf32_Ehdr* ehdr = cst_ehdr;
-	Elf32_Shdr* shdr = cst_shdr;
-	for (int j=0; j<ehdr->e_shnum; j++){
-		if(shdr->sh_type == SHT_STRTAB){
-			printf("%s\n", shstr_str+shdr->sh_name);
-		}
+  switch (type) {
+    case STT_NOTYPE:return "NOTYPE";
+    case STT_OBJECT:return "OBJECT";
+    case STT_FUNC:return "FUNC";
+    case STT_SECTION:return "SECTION";
+    case STT_FILE:return "FILE";
+    case STT_COMMON:return "COMMON";
+    case STT_TLS:return "TLS";
+    case STT_NUM:return "NUM";
+    case STT_LOOS:return "LOOS";
+    //case STT_GNU_IFUNC:return "IFUNC";
+    case STT_HIOS:return "HIOS";
+    case STT_LOPROC:return "LOPROC";
+    case STT_HIPROC:return "HIPROC";
+  }
+}
 
-		read2mem(shdr->);
-		shdr++;
-	}
+char* check_st_bind(unsigned char bind)
+{
+  switch (bind) {
+    case STB_LOCAL:return "Local";
+    case STB_GLOBAL:return "Global";
+    case STB_WEAK:return "Weak";
+    case STB_NUM:return "Number";
+    case STB_LOOS:return "LOOS";
+    //case STB_GNU_UNIQUE:return "Unique";
+    case STB_HIOS:return "HIOS";
+    case STB_LOPROC:return "LOPROC";
+    case STB_HIPROC:return "HIPROC";
+  }
+}
+
+char* check_st_vis(unsigned char vis)
+{
+  switch (vis) {
+    case STV_DEFAULT:return "DEFAULT";
+    case STV_INTERNAL:return "INTERNAL";
+    case STV_HIDDEN:return "HIDDEN";
+    case STV_PROTECTED:return "PROTECTED";
+  }
+}
+
+int print_s_symtab()
+{
+  void* tmp = get_by_sname(".symtab");
+  //printf("%p\n", tmp);
+  int num = get_num_sym(".symtab");
+  //printf("%d\n", num);
+  char* s_strtab = (char*)get_by_sname(".strtab");
+
+  if(tmp == NULL){
+    return 0;
+  }
+  Elf32_Sym* sym = (Elf32_Sym *)tmp;
+  printf("%s", "\n<SECTION .symtab>\n");
+  printf("    [Num]  %-10s%-6s%-10s%-8s%-9s%-6s%-3s\n", "Value", "Size","Type","Bind", "Vis","Ndx","Name");
+  for (int i = 0; i < num; i++) {
+    printf("    %-5d  ", i);
+    printf("%08x  ", sym->st_value);
+    printf("%04x  ", sym->st_size);
+    printf("%-10s", check_st_type(ELF32_ST_TYPE(sym->st_info)));
+    printf("%-8s", check_st_bind(ELF32_ST_BIND(sym->st_info)));
+    printf("%-9s", check_st_vis(sym->st_other));
+    printf("%04x  ", sym->st_shndx);
+    printf("%s\n", s_strtab+sym->st_name);
+    sym++;
+  }
+
+  return 0;
+}
+
+int print_s_dynsym()
+{
+  void* tmp = get_by_sname(".dynsym");
+  //printf("%p\n", tmp);
+  int num = get_num_sym(".dynsym");
+  //printf("%d\n", num);
+  char* s_strtab = (char*)get_by_sname(".dynstr");
+
+  if(tmp == NULL){
+    return 0;
+  }
+  Elf32_Sym* sym = (Elf32_Sym *)tmp;
+  printf("%s", "\n<SECTION .dynsym>\n");
+  printf("    [Num]  %-10s%-6s%-10s%-8s%-9s%-6s%-3s\n", "Value", "Size","Type","Bind", "Vis","Ndx","Name");
+  for (int i = 0; i < num; i++) {
+    printf("    %-5d  ", i);
+    printf("%08x  ", sym->st_value);
+    printf("%04x  ", sym->st_size);
+    printf("%-10s", check_st_type(ELF32_ST_TYPE(sym->st_info)));
+    printf("%-8s", check_st_bind(ELF32_ST_BIND(sym->st_info)));
+    printf("%-9s", check_st_vis(sym->st_other));
+    printf("%04x  ", sym->st_shndx);
+    printf("%s\n", s_strtab+sym->st_name);
+    sym++;
+  }
+
+  return 0;
+}
+
+char* get_sym_byaddr(void* addr)
+{
+  int symtab_num = get_num_sym(".symtab");
+  int dynsym_num = get_num_sym(".dynsym");
+  int num = symtab_num + dynsym_num;
+  static void* sym_arr[1000];
+  static char* sym_namearr[1000];
+
+  if(symarr_flag == 0){
+
+    if(symtab_num != 0){
+      Elf32_Sym* sym = (Elf32_Sym *)get_by_sname(".symtab");
+      char* s_strtab = (char*)get_by_sname(".strtab");
+      for (int i = 0; i < symtab_num; i++) {
+        if(ELF32_ST_TYPE(sym->st_info) == STT_FUNC){
+          sym_arr[i] = (void*)sym->st_value;
+          sym_namearr[i] = s_strtab+sym->st_name;
+        }
+        sym++;
+      }
+    }
+
+    if(dynsym_num != 0){
+      Elf32_Sym* dyn = (Elf32_Sym *)get_by_sname(".dynsym");
+      char* s_dynstr = (char*)get_by_sname(".dynstr");
+      for (int j = 0; j < dynsym_num; j++) {
+        if(ELF32_ST_TYPE(dyn->st_info) == STT_FUNC){
+          sym_arr[symtab_num+j] = (void*)dyn->st_value;
+          sym_namearr[symtab_num+j] = s_dynstr+dyn->st_name;
+        }
+        dyn++;
+      }
+    }
+    symarr_flag = 1;
+  }
+  for (int a = 0; a < num; a++) {
+    if(sym_arr[a] == addr){
+      return sym_namearr[a];
+    }
+  }
+  return NULL;
+
+}
+
+int print_s_text()
+{
+  void* sb =SB;
+  Elf32_Shdr* shdr = get_shdr_byname(".text");
+  void* buffer = sb + shdr->sh_offset;
+  int size = shdr->sh_size;
+  void* mem_addr = (void*)shdr->sh_addr;
+
+  printf("\n%s\n", "<SECTION .text>");
+  print_asm(buffer, size, mem_addr);
+
+  return 0;
+}
+//init
+void init_readelf(char* filename)
+{
+  malloc_file(filename);
 }

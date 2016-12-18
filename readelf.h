@@ -2,17 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
-extern FILE * f;
+extern void* SB;
 
-void* read2mem(int start_addr, int offset, int size);
+int print_ehdr();
+int print_shdr();
+int print_s_symtab();
+int print_s_dynsym();
+int print_s_text();
+char* get_sym_byaddr(void* addr);
 
-int open_file(char * filename);
-
-void* read_ehdr();
-
-int print_ehdr(Elf32_Ehdr * cst_ehdr);
-
-void* read_shdr(Elf32_Ehdr* cst_ehdr);
-
-int print_shdr(Elf32_Shdr * cst_shdr, Elf32_Ehdr* cst_ehdr);
+void init_readelf(char* filename);

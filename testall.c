@@ -1,4 +1,4 @@
-#include "all.h"
+#include "readelf.h"
 #include "ppptra.h"
 
 int main(int argc, char *argv[]) {
@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
       case 'b':bp(0x0804844d);break;
       case 'c':contn();break;
       case 'n':next_step();break;
-      case NULL:next_step();break;
       default:next_step();break;
     }
     //fflush(stdin);

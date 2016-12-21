@@ -107,3 +107,8 @@ int next_step()
 	print_asm((void*)buffer, 24, (void*)regs.eip);
 	return 0;
 }
+
+void pkill()
+{
+	ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_EXITKILL);
+}

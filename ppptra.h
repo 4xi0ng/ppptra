@@ -19,3 +19,4 @@ int handle_is_bp();
 int bp(long addr);
 int contn();
 int next_step();
+void pkill();

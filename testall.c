@@ -1,10 +1,12 @@
 #include "readelf.h"
 #include "ppptra.h"
+#include "disas.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static void invalid(void){
-  fprintf(stderr, "Invalid argument! use -h for help~\n", );
+  fprintf(stderr, "Invalid argument! use -h for help~\n");
 }
 
 static void usage(void)
@@ -32,6 +34,16 @@ static void usage(void)
     " set @[address] [value]         Modify the value of the address\n");
 }
 
+long get_true_bpaddr(char * str)
+{
+  long addr;
+  if(*str == '@'){
+    addr = strtol(str+1, NULL, 16);
+    return addr;
+  }
+  return (long)get_addr_bysym(str);
+}
+
 int main(int argc, char *argv[]) {
   /* code */
   char* filename = argv[1];
@@ -41,7 +53,7 @@ int main(int argc, char *argv[]) {
   }
   char c[50];
   char c2[50]="\n";
-  char op[3][10];
+  char* op[3];
 
   init_readelf(filename);
   hang_up(filename);
@@ -69,50 +81,52 @@ int main(int argc, char *argv[]) {
 
     if(strcmp("disas", op[0])==0){
       //disas
-
+      if(op[2]!=NULL){
+        invalid();usage();exit(0);
+      }
+      long bpaddr = get_true_bpaddr(op[1]);
+      if(bpaddr==0){
+        printf("%s\n", "invalid address");
+      }else{
+        print_all_func((void *)bpaddr);
+      }
     }else if(strcmp("finish", op[0])==0){
       //finish
 
     }else if(strcmp("set", op[0])==0){
       //set
 
-    }else switch (op[0]) {
+    }else switch (* op[0]) {
       case 'q':
         if(op[1]!=NULL){
           invalid();usage();exit(0);
         }
+        exit(0);
       case 'b':
-        if(op==NULL){
-          invalid();usage();exit(1);
+        if(op[2]!=NULL){
+          invalid();usage();exit(0);
         }
-        long bpaddr = get_true_addr(op);
+        long bpaddr = get_true_bpaddr(op[1]);
+        if(bpaddr==0){
+          printf("%s\n", "invalid breakpoint");
+          break;
+        }
         bp(bpaddr);
-
+        break;
       case 'c':
-
+        contn();break;
       case 's':
-
+        next_step();break;
       case 'n':
-
+        break;
       case 'x':
-
+        break;
       case 'r':
+        break;
     }
 
-    printf("%s\n", c);
+
   }
 
-
-
-    //printf("c is %c\n", c);
-    switch(c){
-      case 'b':bp(0x0804844d);break;
-      case 'c':contn();break;
-      case 'n':next_step();break;
-      default:next_step();break;
-    }
-    //fflush(stdin);
-  }
-  //test(filename);
   return 0;
 }

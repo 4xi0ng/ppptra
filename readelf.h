@@ -12,5 +12,7 @@ int print_s_symtab();
 int print_s_dynsym();
 int print_s_text();
 char* get_sym_byaddr(void* addr);
+void* get_addr_bysym(char* fname);
+int print_all_func(void* addr);
 
 void init_readelf(char* filename);

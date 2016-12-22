@@ -7,6 +7,9 @@
 
 void* SB;
 int symarr_flag = 0;
+static void* sym_arr[1000];
+static char* sym_namearr[1000];
+static int sym_sizearr[1000];
 
 
 int get_filesize(char* filename)
@@ -402,8 +405,6 @@ char* get_sym_byaddr(void* addr)
   int symtab_num = get_num_sym(".symtab");
   int dynsym_num = get_num_sym(".dynsym");
   int num = symtab_num + dynsym_num;
-  static void* sym_arr[1000];
-  static char* sym_namearr[1000];
 
   if(symarr_flag == 0){
 
@@ -414,6 +415,7 @@ char* get_sym_byaddr(void* addr)
         if(ELF32_ST_TYPE(sym->st_info) == STT_FUNC){
           sym_arr[i] = (void*)sym->st_value;
           sym_namearr[i] = s_strtab+sym->st_name;
+          sym_sizearr[i] = sym->st_size;
         }
         sym++;
       }
@@ -426,6 +428,7 @@ char* get_sym_byaddr(void* addr)
         if(ELF32_ST_TYPE(dyn->st_info) == STT_FUNC){
           sym_arr[symtab_num+j] = (void*)dyn->st_value;
           sym_namearr[symtab_num+j] = s_dynstr+dyn->st_name;
+          sym_sizearr[symtab_num+j] = dyn->st_size;
         }
         dyn++;
       }
@@ -439,6 +442,51 @@ char* get_sym_byaddr(void* addr)
   }
   return NULL;
 
+}
+
+void* get_addr_bysym(char* fname)
+{
+  int symtab_num = get_num_sym(".symtab");
+  int dynsym_num = get_num_sym(".dynsym");
+  Elf32_Ehdr * ehdr = get_ehdr();
+  int num = symtab_num + dynsym_num;
+
+  if(symarr_flag == 0){
+    get_sym_byaddr((void*)ehdr->e_entry);
+  }
+
+  printf("%s\n", sym_namearr[0]);
+  for (int a = 0; a < num; a++) {
+    if(sym_namearr[a] == fname){
+      return sym_arr[a];
+    }
+  }
+  return NULL;
+}
+
+int print_all_func(void* addr)
+{
+  void* sb =SB;
+  int symtab_num = get_num_sym(".symtab");
+  int dynsym_num = get_num_sym(".dynsym");
+  int num = symtab_num + dynsym_num;
+  Elf32_Ehdr * ehdr = get_ehdr();
+  Elf32_Shdr* shdr = get_shdr_byname(".text");
+  void* buffer = sb + shdr->sh_offset + ((int)addr - ehdr->e_entry);
+
+  if(symarr_flag == 0){
+    get_sym_byaddr("test");
+  }
+  int size = 32;
+  for (int a = 0; a < num; a++) {
+    if(sym_arr[a] == addr){
+      size = sym_sizearr[a];
+      break;
+    }
+  }
+  print_asm(buffer, size, addr);
+
+  return 0;
 }
 
 int print_s_text()

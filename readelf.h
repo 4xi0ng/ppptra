@@ -4,7 +4,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
-extern void* SB;
+void* SB;
+int symarr_flag;
+void* sym_arr[1000];
+char* sym_namearr[1000];
+int sym_sizearr[1000];
 
 int print_ehdr();
 int print_shdr();

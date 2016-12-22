@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   //print_s_dynsym();
   //print_s_text();
   while (1) {
-    printf(">");
+    printf("\n\033[34m>\033[0m");
     fgets(c, 50, stdin);
     if(strcmp(c, "\n")==0){
       strcpy(c, c2);

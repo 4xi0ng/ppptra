@@ -7,9 +7,9 @@
 
 void* SB;
 int symarr_flag = 0;
-static void* sym_arr[1000];
-static char* sym_namearr[1000];
-static int sym_sizearr[1000];
+void* sym_arr[1000];
+char* sym_namearr[1000];
+int sym_sizearr[1000];
 
 
 int get_filesize(char* filename)
@@ -417,6 +417,7 @@ char* get_sym_byaddr(void* addr)
           sym_namearr[i] = s_strtab+sym->st_name;
           sym_sizearr[i] = sym->st_size;
         }
+        //printf("okok%s\n", sym_namearr[i]);
         sym++;
       }
     }
@@ -454,11 +455,11 @@ void* get_addr_bysym(char* fname)
   if(symarr_flag == 0){
     get_sym_byaddr((void*)ehdr->e_entry);
   }
-
-  printf("%s\n", sym_namearr[0]);
   for (int a = 0; a < num; a++) {
-    if(sym_namearr[a] == fname){
-      return sym_arr[a];
+    if(sym_namearr[a]!=NULL){
+      if(strcmp(sym_namearr[a], fname)==0){
+        return sym_arr[a];
+      }
     }
   }
   return NULL;

@@ -120,9 +120,45 @@ int main(int argc, char *argv[]) {
       case 'n':
         break;
       case 'x':
+        if(op[2]!=NULL){
+          invalid();usage();exit(0);
+        }
+        long addr = get_true_bpaddr(op[1]);
+        if(addr==0){
+          printf("%s\n", "invalid address");
+          break;
+        }
+        long data = ptrace(PTRACE_PEEKTEXT, child_pid, addr, NULL);
+        printf("[%lx~%lx]: %lx\n", addr+4, addr, data);
         break;
       case 'r':
-        break;
+      //r -E
+        if(strcmp(op[1], "-E")==0 && op[2]==NULL){
+          print_ehdr();
+          break;
+        }
+      //r -S
+        else if(strcmp(op[1], "-S")==0){
+          if(op[2]==NULL){
+            print_shdr();
+            break;
+          }else if(strcmp(op[2],".text")==0){
+            print_s_text();
+            break;
+          }else if(strcmp(op[2],".symtab")==0){
+            print_s_symtab();
+            break;
+          }else if(strcmp(op[2],".dynsym")==0){
+            print_s_dynsym();
+            break;
+          }
+
+        }
+      //r -S [.text]
+
+      //r -S all
+
+
     }
 
 

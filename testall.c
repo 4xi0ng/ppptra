@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
     if(strcmp("disas", op[0])==0){
       //disas
-      if(op[2]!=NULL){
+      if(op[2]!=NULL || op[1]==NULL){
         invalid();usage();exit(0);
       }
       long bpaddr = get_true_bpaddr(op[1]);
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
         }
         exit(0);
       case 'b':
-        if(op[2]!=NULL){
+        if(op[2]!=NULL || op[1]==NULL){
           invalid();usage();exit(0);
         }
         long bpaddr = get_true_bpaddr(op[1]);
@@ -114,13 +114,19 @@ int main(int argc, char *argv[]) {
         bp(bpaddr);
         break;
       case 'c':
+        if(op[1]!=NULL){
+          invalid();usage();exit(0);
+        }
         contn();break;
       case 's':
+        if(op[1]!=NULL){
+          invalid();usage();exit(0);
+        }
         next_step();break;
       case 'n':
         break;
       case 'x':
-        if(op[2]!=NULL){
+        if(op[2]!=NULL || op[1]==NULL){
           invalid();usage();exit(0);
         }
         long addr = get_true_bpaddr(op[1]);
@@ -151,8 +157,10 @@ int main(int argc, char *argv[]) {
           }else if(strcmp(op[2],".dynsym")==0){
             print_s_dynsym();
             break;
+          }else if(strcmp(op[2],".plt")==0){
+            print_s_plt();
+            break;
           }
-
         }
       //r -S [.text]
 

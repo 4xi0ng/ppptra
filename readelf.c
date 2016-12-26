@@ -503,6 +503,13 @@ int print_s_text()
 
   return 0;
 }
+
+int print_s_plt()
+{
+  void* sb =SB;
+  Elf32_Shdr* shdr = get_shdr_byname(".plt");
+}
+
 //init
 void init_readelf(char* filename)
 {

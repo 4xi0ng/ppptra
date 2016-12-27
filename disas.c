@@ -31,6 +31,7 @@ int print_asm(void* buffer, int buffer_size, void* mem_addr)
 {
 	ud_init(&ud_obj);
 	ud_set_mode(&ud_obj, 32);
+	ud_set_pc(&ud_obj, (int)mem_addr);
 	ud_set_vendor(&ud_obj, UD_VENDOR_INTEL);
 	ud_set_syntax(&ud_obj, UD_SYN_INTEL);
 	ud_set_input_buffer(&ud_obj, buffer, buffer_size);

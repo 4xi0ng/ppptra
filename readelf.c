@@ -508,8 +508,91 @@ int print_s_plt()
 {
   void* sb =SB;
   Elf32_Shdr* shdr = get_shdr_byname(".plt");
+  void* buffer = sb + shdr->sh_offset;
+  void* mem_addr = (void*)shdr->sh_addr;
+  int size = shdr->sh_size;
+  int num = size/16;
+  printf("\n<SECTION .plt>\n");
+  for(int i=0;i<num;i++){
+    printf("PLT[%d]\n", i);
+    print_asm(buffer, 16, mem_addr);
+    buffer += 16;
+    mem_addr += 16;
+  }
+  return 0;
 }
 
+int  print_s_interp()
+{
+  void* sb =SB;
+  Elf32_Shdr* shdr = get_shdr_byname(".interp");
+  void* buffer = sb + shdr->sh_offset;
+  printf("\n<SECTION .interp>\n%s\n", buffer);
+  return 0;
+}
+
+int print_s_rel()
+{
+  Elf32_Sym* sym = get_by_sname(".dynsym");
+  char* s_strtab = (char*)get_by_sname(".dynstr");
+  printf("\n<SECTION .rel>\n");
+  if(get_shdr_byname(".rel.dyn")!=NULL){
+    void* sb =SB;
+    Elf32_Shdr* shdr = get_shdr_byname(".rel.dyn");
+    Elf32_Rel* rel = sb + shdr->sh_offset;
+    int num = shdr->sh_size/8;
+    printf("[.rel.dyn] count %d:\n", num);
+    printf("OFFSET    TYPE             SYMBOL\n");
+    for(int i=0;i<num;i++){
+      printf("%08lx  ",rel->r_offset);
+      switch (ELF32_R_TYPE(rel->r_info)) {
+        case 6:printf("R_386_GLOB_DAT   ");break;
+        case 7:printf("R_386_JUMP_SLOT  ");break;
+        default:printf("%d", ELF32_R_TYPE(rel->r_info));
+      }
+      int ndx = ELF32_R_SYM(rel->r_info);
+      Elf32_Sym* mysym = sym;
+      while(ndx>0){
+        mysym++;
+        ndx--;
+      }
+      printf("%s\n", s_strtab+mysym->st_name);
+      rel++;
+    }
+  }
+
+  if(get_shdr_byname(".rel.plt")!=NULL){
+    void* sb =SB;
+    Elf32_Shdr* shdr = get_shdr_byname(".rel.plt");
+    Elf32_Rel* rel = sb + shdr->sh_offset;
+    int num = shdr->sh_size/8;
+    printf("[.rel.plt] count %d:\n", num);
+    printf("OFFSET    TYPE             SYMBOL\n");
+    for(int i=0;i<num;i++){
+      printf("%08lx  ",rel->r_offset);
+      switch (ELF32_R_TYPE(rel->r_info)) {
+        case 6:printf("R_386_GLOB_DAT   ");break;
+        case 7:printf("R_386_JUMP_SLOT  ");break;
+        default:printf("%d", ELF32_R_TYPE(rel->r_info));
+      }
+      int ndx = ELF32_R_SYM(rel->r_info);
+      Elf32_Sym* mysym = sym;
+      while(ndx>0){
+        mysym++;
+        ndx--;
+      }
+      printf("%s\n", s_strtab+mysym->st_name);
+      rel++;
+    }
+  }
+
+  return 0;
+}
+
+int print_s_dynamic()
+{
+
+}
 //init
 void init_readelf(char* filename)
 {

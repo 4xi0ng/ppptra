@@ -42,7 +42,7 @@ int print_asm(void* buffer, int buffer_size, void* mem_addr)
 	while (ud_disassemble(&ud_obj)) {
 		char* func = get_sym_byaddr(mem_addr);
 		if(func != NULL){
-			printf("\033[34m**%s**\033[0m\n", func);
+			printf("\033[32m%s\033[0m\n", func);
 		}
 		len = ud_insn_len(&ud_obj);
 

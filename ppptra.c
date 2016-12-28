@@ -56,7 +56,7 @@ int handle_is_bp()
 	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
 	for(int i=0; i<100; i++){
 		if(regs.eip-1 == bp_addr[i]){
-			printf("\033[34m@breakpoint %d\033[0m", i+1);
+			printf("\033[34mbreakpoint %d\033[0m", i+1);
 
 			regs.eip = bp_addr[i];
 			ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
@@ -68,9 +68,9 @@ int handle_is_bp()
 			buffer[2] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+8, NULL);
 			buffer[3] = ptrace(PTRACE_PEEKTEXT, child_pid, regs.eip+12, NULL);
 
-			printf("oldchar%lx\n", oldchar[i]);
-			printf("addr%lx\n", bp_addr[i]);
-			printf("now%lx\n", ptrace(PTRACE_PEEKTEXT, child_pid, bp_addr[i], 0));
+			//printf("oldchar%lx\n", oldchar[i]);
+			printf(" addr@%08lx\n", bp_addr[i]);
+			//printf("now%lx\n", ptrace(PTRACE_PEEKTEXT, child_pid, bp_addr[i], 0));
 			//print_asm((void*)regs.eip, 16, (void*)regs.eip);
 			print_asm((void*)buffer, 16, (void*)regs.eip);
 			return 1;

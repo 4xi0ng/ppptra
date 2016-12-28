@@ -73,7 +73,10 @@ int print_s_got()
 }
 
 int main(int argc, char *argv[]) {
-  /* code */
+  if (argv[1]==NULL) {
+    usage();
+    exit(0);
+  }
   char* filename = argv[1];
   if(strcmp(filename,"-h")==0){
     usage();
@@ -203,6 +206,10 @@ int main(int argc, char *argv[]) {
         printf("[%lx~%lx]: %08lx\n", addr+4, addr, data);
         break;
       case 'r':
+        if(op[1]==NULL){
+          printf("no such a command\n");
+          break;
+        }
       //r -E
         if(strcmp(op[1], "-E")==0 && op[2]==NULL){
           print_ehdr();

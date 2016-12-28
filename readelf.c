@@ -479,12 +479,13 @@ int print_all_func(void* addr)
     get_sym_byaddr("test");
   }
   int size = 32;
+  long side = shdr->sh_addr + shdr->sh_size;
   for (int a = 0; a < num; a++) {
-    if(sym_arr[a] == addr){
-      size = sym_sizearr[a];
-      break;
+    if( (long)sym_arr[a]>addr && (long)sym_arr[a]<side){
+      side = sym_arr[a];
     }
   }
+  size = side - (long)addr;
   print_asm(buffer, size, addr);
 
   return 0;
@@ -492,14 +493,29 @@ int print_all_func(void* addr)
 
 int print_s_text()
 {
-  void* sb =SB;
   Elf32_Shdr* shdr = get_shdr_byname(".text");
-  void* buffer = sb + shdr->sh_offset;
   int size = shdr->sh_size;
-  void* mem_addr = (void*)shdr->sh_addr;
+  long mem_addr = shdr->sh_addr;
 
+  int symtab_num = get_num_sym(".symtab");
+  int dynsym_num = get_num_sym(".dynsym");
+  Elf32_Ehdr * ehdr = get_ehdr();
+  int num = symtab_num + dynsym_num;
+
+  if(symarr_flag == 0){
+    get_sym_byaddr((void*)ehdr->e_entry);
+  }
   printf("\n%s\n", "<SECTION .text>");
-  print_asm(buffer, size, mem_addr);
+  long val = mem_addr;
+  while (val>=mem_addr && val<=mem_addr+size) {
+    for (int a = 0; a < num; a++) {
+      if(val==sym_arr[a]){
+        printf("%08lx    %s\n", val, sym_namearr[a]);
+        break;
+      }
+    }
+    val = val+1;
+  }
 
   return 0;
 }
